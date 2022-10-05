@@ -29,7 +29,7 @@ const refreshAccessToken = async (token: any) => {
       accessTokenExpires: payload.exp * 1000,
     };
   } catch (err) {
-    console.log(err);
+    console.log('error', err);
 
     return {
       ...token,
@@ -39,6 +39,9 @@ const refreshAccessToken = async (token: any) => {
 };
 
 export const authOptions: NextAuthOptions = {
+  session: {
+    strategy: 'jwt',
+  },
   providers: [
     Credentials({
       name: 'credentials',
@@ -46,7 +49,6 @@ export const authOptions: NextAuthOptions = {
         email: {
           label: 'email',
           type: 'email',
-          placeholder: 'test@domain.com',
         },
         password: {
           label: 'password',
@@ -60,38 +62,42 @@ export const authOptions: NextAuthOptions = {
         };
         // database lookup
 
-        const response = await axios.post(
-          'http://localhost:3500/api/v1/auth/login',
-          JSON.stringify(payload),
-          {
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            withCredentials: true,
-          }
-        );
+        const response = await axios
+          .post(
+            'http://localhost:3500/api/v1/auth/login',
+            JSON.stringify(payload),
+            {
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              withCredentials: true,
+            }
+          )
+          .catch((err) => {
+            throw new Error(err.response.data.message);
+          });
 
         const user = await response.data;
 
-        if (!(response.status === 201)) {
-          throw user;
-        }
-
-        if (response.status === 201 && user) {
+        if (response.status === 200) {
           return user;
         }
 
-        // login failed
         return null;
       },
     }),
   ],
   callbacks: {
+    redirect: async ({ url, baseUrl }) => {
+      // Allows relative callback URLs
+      if (url.startsWith('/')) return `${baseUrl}${url}`;
+      // Allows callback URLs on the same origin
+      else if (new URL(url).origin === baseUrl) return url;
+      return baseUrl;
+    },
     jwt: async ({ token, user }) => {
       if (user) {
-        const payload: { exp: number } = jwtDecode(
-          user?.access_token as string
-        );
+        const payload: { exp: number } = jwtDecode(user.access_token);
         const { access_token, refresh_token, ...data } = user;
         return {
           accessToken: access_token,
@@ -103,7 +109,7 @@ export const authOptions: NextAuthOptions = {
         };
       }
 
-      if (Date.now() < (token.accessTokenExpires as number) - 1000) {
+      if (Date.now() < token.accessTokenExpires - 1000) {
         return token;
       }
 
@@ -112,7 +118,7 @@ export const authOptions: NextAuthOptions = {
     },
     session: async ({ session, token }) => {
       if (token) {
-        session.user = token.user!;
+        session.user = token.user;
         session.accessToken = token.accessToken;
         session.refreshToken = token.refreshToken;
         session.error = token.error;
@@ -121,12 +127,9 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
   },
-  secret: process.env.SECRET_CODE,
   pages: {
     signIn: '/login',
-  },
-  jwt: {
-    secret: process.env.SECRET_CODE,
+    signOut: '/logout',
   },
 };
 

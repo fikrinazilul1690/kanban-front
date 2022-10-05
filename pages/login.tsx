@@ -2,11 +2,17 @@ import TextField from '@mui/material/TextField';
 import { LoadingButton } from '@mui/lab';
 import { Box } from '@mui/system';
 import { GetServerSideProps, NextPage } from 'next';
-import { useSession } from 'next-auth/react';
+import { signIn, useSession } from 'next-auth/react';
 import Layout from '../components/layout/layout';
 import { getCsrfToken } from 'next-auth/react';
 import Button from '@mui/material/Button';
 import Link from 'next/link';
+import { FormEvent, useState } from 'react';
+import { CircularProgress, Stack } from '@mui/material';
+import Alert from '@mui/material/Alert';
+import AlertTitle from '@mui/material/AlertTitle';
+import { useRouter } from 'next/router';
+import { getToken } from 'next-auth/jwt';
 
 interface Props {
   csrfToken: string;
@@ -14,14 +20,56 @@ interface Props {
 
 const Login: NextPage<Props> = ({ csrfToken }) => {
   const { status } = useSession();
+  const [err, setErr] = useState('');
+  const router = useRouter();
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setErr('');
+
+    const data = new FormData(e.currentTarget);
+    const email = data.get('email');
+    const password = data.get('password');
+    const res = await signIn('credentials', {
+      redirect: false,
+      email,
+      password,
+      callbackUrl: `${router.query.callbackUrl || window.location.origin}`,
+    });
+
+    if (res?.status === 401) {
+      setErr(res.error!);
+    }
+
+    if (res?.ok) {
+      router.push(res.url!);
+    }
+  };
+  if (status === 'loading') {
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100vh',
+        }}
+      >
+        <CircularProgress size={100} />
+      </Box>
+    );
+  }
   return (
     <Layout>
-      <Box
-        component={'form'}
-        sx={{ mt: 1 }}
-        method='post'
-        action='/api/auth/callback/credentials'
-      >
+      <Box component={'h2'}>Kanban</Box>
+      {!!err && (
+        <Stack sx={{ width: '100%' }} spacing={2}>
+          <Alert severity='error' variant='outlined'>
+            <AlertTitle>Error</AlertTitle>
+            <strong>{err}</strong>
+          </Alert>
+        </Stack>
+      )}
+      <Box component={'form'} sx={{ mt: 1 }} onSubmit={handleSubmit}>
         <input name='csrfToken' type='hidden' defaultValue={csrfToken} />
         <TextField
           margin='normal'
@@ -30,7 +78,6 @@ const Login: NextPage<Props> = ({ csrfToken }) => {
           id='email'
           label='Email'
           name='email'
-          disabled={status === 'loading'}
         />
         <TextField
           margin='normal'
@@ -40,7 +87,6 @@ const Login: NextPage<Props> = ({ csrfToken }) => {
           label='Password'
           name='password'
           type={'password'}
-          disabled={status === 'loading'}
         />
         <LoadingButton
           sx={{ mt: 3, mb: 2 }}
@@ -48,7 +94,6 @@ const Login: NextPage<Props> = ({ csrfToken }) => {
           color='success'
           type='submit'
           fullWidth
-          loading={status === 'loading'}
         >
           Login
         </LoadingButton>
@@ -71,6 +116,13 @@ export default Login;
 
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
   const csrfToken = await getCsrfToken(ctx);
+  const token = await getToken(ctx);
+  if (token) {
+    return {
+      redirect: { destination: '/', permanent: false },
+      props: {},
+    };
+  }
   return {
     props: { csrfToken },
   };

@@ -27,7 +27,7 @@ function MyApp({
   emotionCache = clientSideEmotionCache,
 }: MyAppProps) {
   return (
-    <SessionProvider session={pageProps.session}>
+    <SessionProvider session={pageProps.session} refetchInterval={9}>
       <CacheProvider value={emotionCache}>
         <ThemeProvider theme={darkTheme}>
           <CssBaseline />
