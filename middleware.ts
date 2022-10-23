@@ -4,12 +4,11 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export default withAuth({
   callbacks: {
-    authorized({ token }) {
-      console.log('middleware', token);
+    authorized({ req, token }) {
       if (token) return true;
       return false;
     },
   },
 });
 
-export const config = { matcher: ['/test'] };
+export const config = { matcher: ['/projects', '/projects/:projectId*'] };

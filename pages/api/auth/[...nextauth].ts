@@ -2,12 +2,14 @@ import axios from 'axios';
 import jwtDecode from 'jwt-decode';
 import NextAuth, { NextAuthOptions } from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
+import { NextResponse } from 'next/server';
+import axiosClient from '../../../utils/fetcher/axios';
 
 const refreshAccessToken = async (token: any) => {
   try {
     const response = await axios.post(
-      'http://localhost:3500/api/v1/auth/refresh-token',
-      JSON.stringify({ refresh_token: token.refreshToken }),
+      'http://localhost:3500/api/v1/auth/refresh',
+      JSON.stringify({ rt: token.refreshToken }),
       {
         headers: {
           'Content-Type': 'application/json',
@@ -21,15 +23,16 @@ const refreshAccessToken = async (token: any) => {
       throw data;
     }
 
-    const payload: { exp: number } = jwtDecode(data.access_token);
+    const payload: { exp: number } = jwtDecode(data.accessToken);
 
     return {
       ...token,
-      accessToken: data.access_token,
+      accessToken: data.accessToken,
       accessTokenExpires: payload.exp * 1000,
     };
   } catch (err) {
     console.log('error', err);
+    NextResponse.redirect('/login');
 
     return {
       ...token,
@@ -97,15 +100,19 @@ export const authOptions: NextAuthOptions = {
     },
     jwt: async ({ token, user }) => {
       if (user) {
-        const payload: { exp: number } = jwtDecode(user.access_token);
-        const { access_token, refresh_token, ...data } = user;
-        return {
-          accessToken: access_token,
-          refreshToken: refresh_token,
-          accessTokenExpires: payload.exp * 1000,
-          user: {
-            ...data,
+        const { accessToken, refreshToken } = user;
+        const payload: { exp: number } = await jwtDecode(accessToken);
+        const account = await axiosClient.get('/users/me', {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
           },
+        });
+
+        return {
+          accessToken: accessToken,
+          refreshToken: refreshToken,
+          accessTokenExpires: payload.exp * 1000,
+          user: account.data,
         };
       }
 
@@ -129,7 +136,6 @@ export const authOptions: NextAuthOptions = {
   },
   pages: {
     signIn: '/login',
-    signOut: '/logout',
   },
 };
 

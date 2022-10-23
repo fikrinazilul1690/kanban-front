@@ -1,18 +1,19 @@
 import TextField from '@mui/material/TextField';
-import { LoadingButton } from '@mui/lab';
-import { Box } from '@mui/system';
+import LoadingButton from '@mui/lab/LoadingButton';
+import Box from '@mui/system/Box';
 import { GetServerSideProps, NextPage } from 'next';
 import { signIn, useSession } from 'next-auth/react';
-import Layout from '../components/layout/layout';
 import { getCsrfToken } from 'next-auth/react';
 import Button from '@mui/material/Button';
 import Link from 'next/link';
 import { FormEvent, useState } from 'react';
-import { CircularProgress, Stack } from '@mui/material';
+import CircularProgress from '@mui/material/CircularProgress';
+import Stack from '@mui/material/Stack';
 import Alert from '@mui/material/Alert';
 import AlertTitle from '@mui/material/AlertTitle';
 import { useRouter } from 'next/router';
 import { getToken } from 'next-auth/jwt';
+import BaseLayout from '../components/layout/base-layout';
 
 interface Props {
   csrfToken: string;
@@ -33,7 +34,7 @@ const Login: NextPage<Props> = ({ csrfToken }) => {
       redirect: false,
       email,
       password,
-      callbackUrl: `${router.query.callbackUrl || window.location.origin}`,
+      callbackUrl: `${router.query.callbackUrl || '/projects'}`,
     });
 
     if (res?.status === 401) {
@@ -59,7 +60,7 @@ const Login: NextPage<Props> = ({ csrfToken }) => {
     );
   }
   return (
-    <Layout>
+    <BaseLayout>
       <Box component={'h2'}>Kanban</Box>
       {!!err && (
         <Stack sx={{ width: '100%' }} spacing={2}>
@@ -108,7 +109,7 @@ const Login: NextPage<Props> = ({ csrfToken }) => {
           Don&apos;t have an account? Signup
         </Button>
       </Link>
-    </Layout>
+    </BaseLayout>
   );
 };
 
@@ -119,7 +120,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
   const token = await getToken(ctx);
   if (token) {
     return {
-      redirect: { destination: '/', permanent: false },
+      redirect: { destination: '/projects', permanent: false },
       props: {},
     };
   }

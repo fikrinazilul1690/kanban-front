@@ -1,46 +1,8 @@
-import createEmotionServer from '@emotion/server/create-instance';
-import createEmotionCache from '../utils/createEmotionCache';
-import Document, {
-  Html,
-  Head,
-  Main,
-  NextScript,
-  DocumentContext,
-} from 'next/document';
+import Document, { Html, Head, Main, NextScript } from 'next/document';
 import React from 'react';
+import { getInitColorSchemeScript } from '@mui/material';
 
 class MyDocument extends Document {
-  static async getInitialProps(ctx: DocumentContext) {
-    const originalRenderPage = ctx.renderPage;
-    const cache = createEmotionCache();
-    const initialProps = await Document.getInitialProps(ctx);
-    const { extractCriticalToChunks } = createEmotionServer(cache);
-
-    ctx.renderPage = () =>
-      originalRenderPage({
-        enhanceApp: (App: any) => (props) =>
-          <App emotionChache={cache} {...props} />,
-      });
-
-    const emotionStyles = extractCriticalToChunks(initialProps.html);
-    const emotionStyleTags = emotionStyles.styles.map((style) => (
-      <style
-        data-emotion={`${style.key} ${style.ids.join(' ')}`}
-        key={style.key}
-        // eslint-disable-next-line react/no-danger
-        dangerouslySetInnerHTML={{ __html: style.css }}
-      />
-    ));
-
-    return {
-      ...initialProps,
-      styles: [
-        ...React.Children.toArray(initialProps.styles),
-        ...emotionStyleTags,
-      ],
-    };
-  }
-
   render() {
     return (
       <Html lang='en'>
@@ -51,7 +13,9 @@ class MyDocument extends Document {
           />
         </Head>
         <body>
+          {getInitColorSchemeScript()}
           <Main />
+          <div id='modal-root' />
           <NextScript />
         </body>
       </Html>

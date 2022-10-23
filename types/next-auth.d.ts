@@ -7,9 +7,14 @@ declare module 'next-auth/jwt' {
     refreshToken: string;
     accessTokenExpires: number;
     user: {
-      createdAt: date;
-      email: string;
       id: string;
+      createdAt: Date;
+      updatedAt: Date;
+      firstName: string;
+      lastName: string;
+      fullName: string;
+      email: string;
+      roles: Array<string>;
     };
   }
 }
@@ -19,27 +24,43 @@ declare module 'next-auth' {
     accessToken: string;
     refreshToken: string;
     user: {
-      createdAt: date;
-      email: string;
       id: string;
+      createdAt: Date;
+      updatedAt: Date;
+      firstName: string;
+      lastName: string;
+      fullName: string;
+      email: string;
+      roles: Array<string>;
     };
   }
 
   interface User {
-    id: string;
-    email: string;
-    createdAt: Date;
-    access_token: string;
-    refresh_token: string;
+    accessToken: string;
+    refreshToken: string;
   }
 }
 
 declare global {
   interface Project {
-    id: string;
-    title: string;
-    desc: string;
+    id: number;
     createdAt: Date;
-    userId: string;
+    updatedAt: Date;
+    title: string;
+    slug: string;
+    description: string;
+    owner: string;
+    UsStatus: UsStatus[];
+  }
+
+  interface UsStatus {
+    id: number;
+    createdAt: Date;
+    updatedAt: Date;
+    name: string;
+    slug: string;
+    isClosed: boolean;
+    projectId: number;
+    colorHex: string;
   }
 }

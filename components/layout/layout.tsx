@@ -1,6 +1,8 @@
 import { FC, ReactNode } from 'react';
-import { Container, Box } from '@mui/material';
+import Container from '@mui/material/Container';
+import Box from '@mui/material/Box';
 import Image from 'next/image';
+import Sidebar from '../common/sidebar';
 
 interface Props {
   children: ReactNode;
@@ -8,18 +10,23 @@ interface Props {
 
 const Layout: FC<Props> = ({ children }) => {
   return (
-    <Container component={'main'} maxWidth='xs'>
+    <Box
+      sx={{
+        display: 'flex',
+        height: '100vh',
+      }}
+    >
+      <Sidebar />
       <Box
         sx={{
-          marginTop: 8,
-          display: 'flex',
-          alignItems: 'center',
-          flexDirection: 'column',
+          flexGrow: 1,
+          p: 1,
+          width: 'max-content',
         }}
       >
         {children}
       </Box>
-    </Container>
+    </Box>
   );
 };
 
