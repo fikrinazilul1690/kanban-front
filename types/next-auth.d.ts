@@ -50,7 +50,6 @@ declare global {
     slug: string;
     description: string;
     owner: string;
-    UsStatus: UsStatus[];
   }
 
   interface UsStatus {
@@ -62,5 +61,17 @@ declare global {
     isClosed: boolean;
     projectId: number;
     colorHex: string;
+    UserStory: UserStory[];
+  }
+
+  interface UserStory {
+    id: number;
+    createdAt: Date;
+    updatedAt: Date;
+    subject: string;
+    description?: string;
+    order: number;
+    projectId: number;
+    statusSlug: string;
   }
 }

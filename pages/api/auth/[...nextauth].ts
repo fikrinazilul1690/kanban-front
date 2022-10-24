@@ -77,7 +77,7 @@ export const authOptions: NextAuthOptions = {
             }
           )
           .catch((err) => {
-            throw new Error(err.response.data.message);
+            throw new Error(JSON.stringify(err.response.data.message));
           });
 
         const user = await response.data;

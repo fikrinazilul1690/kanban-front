@@ -21,6 +21,12 @@ interface ICreateUsStatus {
   token: JWT | Session;
 }
 
+interface IUpdateUsStatus {
+  payload: Partial<Omit<CreateUsStatusDto, 'projectId'>>;
+  usStatusId: number;
+  token: JWT | Session;
+}
+
 export async function createUsStatus(props: ICreateUsStatus) {
   const { payload, token } = props;
   const usStatus = await axiosClient.post<UsStatus>(
@@ -34,4 +40,26 @@ export async function createUsStatus(props: ICreateUsStatus) {
   );
 
   return usStatus;
+}
+
+export async function updateUsStatus(props: IUpdateUsStatus) {
+  const { payload, usStatusId, token } = props;
+  const usStatus = await axiosClient.patch<UsStatus>(
+    `/userstory-statuses/${usStatusId}`,
+    JSON.stringify({ ...payload }),
+    {
+      headers: {
+        Authorization: `Bearer ${token.accessToken}`,
+      },
+    }
+  );
+}
+
+export async function deleteUsStatus(props: Omit<IUpdateUsStatus, 'payload'>) {
+  const { token, usStatusId } = props;
+  return await axiosClient.delete(`/userstory-statuses/${usStatusId}`, {
+    headers: {
+      Authorization: `Bearer ${token.accessToken}`,
+    },
+  });
 }

@@ -204,7 +204,7 @@ const Signup: NextPage<Props> = ({}) => {
           color='success'
           type='submit'
           fullWidth
-          loading={status === 'loading'}
+          loading={mutation.isLoading}
         >
           Sign Up
         </LoadingButton>

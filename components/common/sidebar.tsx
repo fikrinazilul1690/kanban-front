@@ -30,6 +30,7 @@ const Sidebar: FC<Props> = ({}) => {
   const sidebarWidth = 250;
   const queryClient = useQueryClient();
   const [showCreateProject, setShowCreateProject] = useState(false);
+  const [titleErr, setTitleErr] = useState('');
   const titleRef = useRef<HTMLInputElement>();
   const descRef = useRef<HTMLInputElement>();
   const router = useRouter();
@@ -39,6 +40,10 @@ const Sidebar: FC<Props> = ({}) => {
       console.log(data);
       router.push(`/projects/${data.id}`);
       queryClient.invalidateQueries(['projects']);
+    },
+    onError: (err: any) => {
+      const { title } = err.data.message;
+      title && setTitleErr(title[0]);
     },
   });
   const showDialogCreateProject = () => {
@@ -58,6 +63,12 @@ const Sidebar: FC<Props> = ({}) => {
     ['projects'],
     async () => await getProjects(user?.id)
   );
+
+  useEffect(() => {
+    return () => {
+      setTitleErr('');
+    };
+  }, []);
 
   return (
     <>
@@ -154,6 +165,9 @@ const Sidebar: FC<Props> = ({}) => {
           label='Title'
           name='title'
           inputRef={titleRef}
+          error={!!titleErr}
+          helperText={titleErr}
+          onFocus={() => setTitleErr('')}
         />
         <TextField
           margin='normal'

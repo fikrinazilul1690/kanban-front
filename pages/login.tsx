@@ -6,7 +6,7 @@ import { signIn, useSession } from 'next-auth/react';
 import { getCsrfToken } from 'next-auth/react';
 import Button from '@mui/material/Button';
 import Link from 'next/link';
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import CircularProgress from '@mui/material/CircularProgress';
 import Stack from '@mui/material/Stack';
 import Alert from '@mui/material/Alert';
@@ -22,43 +22,50 @@ interface Props {
 const Login: NextPage<Props> = ({ csrfToken }) => {
   const { status } = useSession();
   const [err, setErr] = useState('');
+  const [emailErr, setEmailErr] = useState('');
+  const [pwdErr, setPwdErr] = useState('');
+  const [isFetching, setIsFetching] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    return () => {
+      setEmailErr('');
+      setPwdErr('');
+      setErr('');
+      setIsFetching(false);
+    };
+  }, []);
+
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setErr('');
 
     const data = new FormData(e.currentTarget);
     const email = data.get('email');
     const password = data.get('password');
-    const res = await signIn('credentials', {
-      redirect: false,
-      email,
-      password,
-      callbackUrl: `${router.query.callbackUrl || '/projects'}`,
-    });
 
-    if (res?.status === 401) {
-      setErr(res.error!);
-    }
+    try {
+      setIsFetching(true);
+      const res = await signIn('credentials', {
+        redirect: false,
+        email,
+        password,
+        callbackUrl: `${router.query.callbackUrl || '/projects'}`,
+      });
 
-    if (res?.ok) {
-      router.push(res.url!);
-    }
+      if (res?.ok) {
+        router.push(res.url!);
+      }
+
+      if (res?.error) {
+        const err: any = JSON.parse(res.error);
+        err?.email && setEmailErr(err.email[0]);
+        err?.password && setPwdErr(err.password[0]);
+        !err?.email && !err.password && setErr(err);
+        setIsFetching(false);
+      }
+    } catch (err) {}
   };
-  if (status === 'loading') {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: '100vh',
-        }}
-      >
-        <CircularProgress size={100} />
-      </Box>
-    );
-  }
+
   return (
     <BaseLayout>
       <Box component={'h2'}>Kanban</Box>
@@ -79,6 +86,12 @@ const Login: NextPage<Props> = ({ csrfToken }) => {
           id='email'
           label='Email'
           name='email'
+          error={!!emailErr}
+          helperText={emailErr}
+          onFocus={() => {
+            setEmailErr('');
+            setErr('');
+          }}
         />
         <TextField
           margin='normal'
@@ -88,6 +101,12 @@ const Login: NextPage<Props> = ({ csrfToken }) => {
           label='Password'
           name='password'
           type={'password'}
+          error={!!pwdErr}
+          helperText={pwdErr}
+          onFocus={() => {
+            setPwdErr('');
+            setErr('');
+          }}
         />
         <LoadingButton
           sx={{ mt: 3, mb: 2 }}
@@ -95,6 +114,7 @@ const Login: NextPage<Props> = ({ csrfToken }) => {
           color='success'
           type='submit'
           fullWidth
+          loading={isFetching}
         >
           Login
         </LoadingButton>

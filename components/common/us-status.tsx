@@ -9,14 +9,21 @@ import DeleteOutlined from '@mui/icons-material/DeleteOutlined';
 import Card from '@mui/material/Card';
 import TextField from '@mui/material/TextField';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import getUsStatuses, { createUsStatus } from '../../utils/fetcher/us-status';
+import getUsStatuses, {
+  createUsStatus,
+  deleteUsStatus,
+  updateUsStatus,
+} from '../../utils/fetcher/us-status';
 import RectangleIcon from '@mui/icons-material/Rectangle';
 import Modal from './modal';
 import Stack from '@mui/material/Stack';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Checkbox from '@mui/material/Checkbox';
 import { useSession } from 'next-auth/react';
+import getUserStories, {
+  createUserStory,
+} from '../../utils/fetcher/user-story';
 
 interface Props {
   projectId: number;
@@ -24,21 +31,69 @@ interface Props {
 
 const UsStatusBoard: NextPage<Props> = ({ projectId }) => {
   const nameRef = useRef<HTMLInputElement>();
+  const subRef = useRef<HTMLInputElement>();
+  const descRef = useRef<HTMLInputElement>();
   const { data: session } = useSession();
   const [colorHex, setColorHex] = useState('#A9AABC');
+  const [colorErr, setColorErr] = useState('');
+  const [nameErr, setNameErr] = useState('');
+  const [subErr, setSubErr] = useState('');
+  const [descErr, setDescErr] = useState('');
   const [isClosed, setIsClosed] = useState(false);
   const [showCreateUsStatus, setShowCreateUsStatus] = useState(false);
-  const [statusName, setStatusName] = useState('');
+  const [showCreateUs, setShowCreateUs] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [usStatusId, setUsStatusId] = useState<number>();
+  const [statusSlug, setStatusSlug] = useState<string>('');
   const queryClient = useQueryClient();
-  const { data: usStatus } = useQuery<UsStatus[]>(['us-status'], () =>
-    getUsStatuses(projectId as number)
+  const { data: usStatus } = useQuery<UsStatus[]>(
+    ['us-status', projectId],
+    () => getUsStatuses(projectId as number)
   );
-  const postUsStatus = useMutation(createUsStatus, {
+  const createMutation = useMutation(createUsStatus, {
     onSuccess: () => {
       setShowCreateUsStatus(false);
       queryClient.invalidateQueries(['us-status']);
     },
+    onError: (err: any) => {
+      const { name, colorHex } = err.data.message;
+      name && setNameErr(name[0]);
+      colorHex && setColorErr(colorHex[0]);
+    },
   });
+  const updateMutation = useMutation(updateUsStatus, {
+    onSuccess: () => {
+      queryClient.invalidateQueries(['us-status']);
+    },
+  });
+  const deleteMutation = useMutation(deleteUsStatus, {
+    onSuccess: () => {
+      setConfirmDelete(false);
+      queryClient.invalidateQueries(['us-status']);
+    },
+  });
+
+  const createUserStoryMutation = useMutation(createUserStory, {
+    onSuccess: () => {
+      setShowCreateUs(false);
+      queryClient.invalidateQueries(['us-status']);
+    },
+    onError: (err: any) => {
+      const { subject, description } = err.data.message;
+      !!subject && setSubErr(subject[0]);
+      !!description && setDescErr(description[0]);
+    },
+  });
+
+  useEffect(() => {
+    return () => {
+      setNameErr('');
+      setColorErr('');
+      setSubErr('');
+      setDescErr('');
+    };
+  }, []);
+
   return (
     <>
       <Box
@@ -65,6 +120,7 @@ const UsStatusBoard: NextPage<Props> = ({ projectId }) => {
           display: 'flex',
           alignItems: 'flex-start',
           width: 'calc(100vw - 400px)',
+          height: 'calc(100vh - 300px)',
           overflowX: 'auto',
         }}
       >
@@ -87,7 +143,15 @@ const UsStatusBoard: NextPage<Props> = ({ projectId }) => {
               >
                 <TextField
                   onBlur={(e) => {
-                    console.log(e.currentTarget.value);
+                    updateMutation.mutate({
+                      payload: {
+                        name: !!e.currentTarget.value
+                          ? e.currentTarget.value
+                          : undefined,
+                      },
+                      token: session!,
+                      usStatusId: status.id,
+                    });
                   }}
                   placeholder={status.name}
                   variant='outlined'
@@ -110,7 +174,10 @@ const UsStatusBoard: NextPage<Props> = ({ projectId }) => {
                     color: 'gray',
                     '&:hover': { color: 'green' },
                   }}
-                  onClick={() => {}}
+                  onClick={() => {
+                    setShowCreateUs(true);
+                    setStatusSlug(status.slug);
+                  }}
                 >
                   <AddOutlined />
                 </IconButton>
@@ -120,12 +187,15 @@ const UsStatusBoard: NextPage<Props> = ({ projectId }) => {
                     color: 'gray',
                     '&:hover': { color: 'red' },
                   }}
-                  onClick={() => {}}
+                  onClick={() => {
+                    setConfirmDelete(true);
+                    setUsStatusId(status.id);
+                  }}
                 >
                   <DeleteOutlined />
                 </IconButton>
               </Box>
-              {/* {section.tasks.map((task, index) => (
+              {status.UserStory.map((task, index) => (
                 <Card
                   sx={{
                     padding: '10px',
@@ -134,28 +204,22 @@ const UsStatusBoard: NextPage<Props> = ({ projectId }) => {
                   key={index}
                   onClick={() => {}}
                 >
-                  <Typography>
-                    {task.title === '' ? 'Untitled' : task.title}
+                  <Typography>{task.subject}</Typography>
+                  <Typography variant='body2' color='text.secondary'>
+                    {task.description}
                   </Typography>
                 </Card>
-              ))} */}
+              ))}
             </Box>
           </div>
         ))}
       </Box>
-      {/* <TaskModal
-        task={selectedTask}
-        boardId={boardId}
-        onClose={() => setSelectedTask(undefined)}
-        onUpdate={onUpdateTask}
-        onDelete={onDeleteTask}
-      /> */}
       <Modal
         action='Create'
         colorAction='success'
         description='Please fill out the form below'
         onClick={() => {
-          postUsStatus.mutate({
+          createMutation.mutate({
             payload: {
               projectId,
               isClosed,
@@ -167,6 +231,8 @@ const UsStatusBoard: NextPage<Props> = ({ projectId }) => {
         }}
         onClose={() => {
           setShowCreateUsStatus(false);
+          setColorErr('');
+          setNameErr('');
         }}
         show={showCreateUsStatus}
         title='Create user story status'
@@ -179,6 +245,9 @@ const UsStatusBoard: NextPage<Props> = ({ projectId }) => {
           label='Name'
           name='name'
           inputRef={nameRef}
+          error={!!nameErr}
+          helperText={nameErr}
+          onFocus={() => setNameErr('')}
         />
         <Stack direction='row' spacing={2} alignItems={'center'}>
           <RectangleIcon
@@ -189,11 +258,13 @@ const UsStatusBoard: NextPage<Props> = ({ projectId }) => {
           />
           <TextField
             margin='normal'
-            required
             id='color'
             label='Color Hex'
             name='color'
             onChange={(e) => setColorHex(e.target.value)}
+            onFocus={() => setColorErr('')}
+            error={!!colorErr}
+            helperText={colorErr}
           />
         </Stack>
         <FormControlLabel
@@ -205,6 +276,75 @@ const UsStatusBoard: NextPage<Props> = ({ projectId }) => {
             />
           }
           label='isClosed'
+        />
+      </Modal>
+      <Modal
+        show={confirmDelete}
+        title='Delete Status Board'
+        action='Delete'
+        colorAction='error'
+        description='All tasks in this status board will be deleted'
+        onClick={() => {
+          deleteMutation.mutate({
+            token: session!,
+            usStatusId: usStatusId!,
+          });
+        }}
+        onClose={() => setConfirmDelete(false)}
+      >
+        <Typography>Are you sure want to delete this Board ?</Typography>
+      </Modal>
+      <Modal
+        show={showCreateUs}
+        title='Create Task'
+        action='Create'
+        colorAction='success'
+        description='Please fill out the form below'
+        onClick={() => {
+          createUserStoryMutation.mutate({
+            token: session!,
+            payload: {
+              projectId,
+              subject: subRef.current?.value!,
+              description: descRef.current?.value! || undefined,
+              statusSlug,
+            },
+          });
+        }}
+        onClose={() => {
+          setShowCreateUs(false);
+          setSubErr('');
+          setDescErr('');
+        }}
+      >
+        <TextField
+          margin='normal'
+          required
+          fullWidth
+          id='subject'
+          label='Subject'
+          name='subject'
+          inputRef={subRef}
+          error={!!subErr}
+          helperText={subErr}
+          onFocus={() => {
+            setSubErr('');
+            setDescErr('');
+          }}
+        />
+        <TextField
+          margin='normal'
+          fullWidth
+          id='description'
+          label='Description'
+          name='description'
+          inputRef={descRef}
+          error={!!descErr}
+          helperText={descErr}
+          onFocus={() => {
+            setSubErr('');
+            setDescErr('');
+          }}
         />
       </Modal>
     </>

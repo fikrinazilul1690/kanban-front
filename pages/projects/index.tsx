@@ -7,7 +7,7 @@ import LoadingButton from '@mui/lab/LoadingButton';
 import Modal from '../../components/common/modal';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   dehydrate,
   QueryClient,
@@ -23,15 +23,19 @@ const Project: NextPage = () => {
   const { data: session } = useSession();
   const queryClient = useQueryClient();
   const [showCreateProject, setShowCreateProject] = useState(false);
+  const [titleErr, setTitleErr] = useState('');
   const titleRef = useRef<HTMLInputElement>();
   const descRef = useRef<HTMLInputElement>();
   const router = useRouter();
   const mutation = useMutation(createProject, {
     onSuccess: (data) => {
       setShowCreateProject(false);
-      console.log(data);
       router.push(`/projects/${data.id}`);
       queryClient.invalidateQueries(['projects']);
+    },
+    onError: (err: any) => {
+      const { title } = err.data.message;
+      title && setTitleErr(title[0]);
     },
   });
   const showDialogCreateProject = () => {
@@ -46,6 +50,13 @@ const Project: NextPage = () => {
       token: session,
     });
   };
+
+  useEffect(() => {
+    return () => {
+      setTitleErr('');
+    };
+  }, []);
+
   return (
     <>
       <Layout>
@@ -83,6 +94,9 @@ const Project: NextPage = () => {
           label='Title'
           name='title'
           inputRef={titleRef}
+          error={!!titleErr}
+          helperText={titleErr}
+          onFocus={() => setTitleErr('')}
         />
         <TextField
           margin='normal'

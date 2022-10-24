@@ -145,7 +145,6 @@ const ProjectBoard: NextPage<Props> = () => {
               value={description ?? undefined}
               placeholder='Add a description'
               variant='outlined'
-              multiline
               fullWidth
               error={!!descErr}
               helperText={descErr}
@@ -182,7 +181,7 @@ const ProjectBoard: NextPage<Props> = () => {
         onClose={() => setConfirmDelete(false)}
       >
         <Typography>
-          Are you sure what delete Project: {project?.title} ?
+          Are you sure want to delete Project: {project?.title} ?
         </Typography>
       </Modal>
     </>
