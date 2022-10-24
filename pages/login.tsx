@@ -7,7 +7,6 @@ import { getCsrfToken } from 'next-auth/react';
 import Button from '@mui/material/Button';
 import Link from 'next/link';
 import { FormEvent, useEffect, useState } from 'react';
-import CircularProgress from '@mui/material/CircularProgress';
 import Stack from '@mui/material/Stack';
 import Alert from '@mui/material/Alert';
 import AlertTitle from '@mui/material/AlertTitle';
@@ -26,15 +25,6 @@ const Login: NextPage<Props> = ({ csrfToken }) => {
   const [pwdErr, setPwdErr] = useState('');
   const [isFetching, setIsFetching] = useState(false);
   const router = useRouter();
-
-  useEffect(() => {
-    return () => {
-      setEmailErr('');
-      setPwdErr('');
-      setErr('');
-      setIsFetching(false);
-    };
-  }, []);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();

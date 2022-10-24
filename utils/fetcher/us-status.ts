@@ -53,6 +53,7 @@ export async function updateUsStatus(props: IUpdateUsStatus) {
       },
     }
   );
+  return usStatus;
 }
 
 export async function deleteUsStatus(props: Omit<IUpdateUsStatus, 'payload'>) {

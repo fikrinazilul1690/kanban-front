@@ -1,18 +1,15 @@
 import Box from '@mui/material/Box';
 import type { GetServerSideProps, NextPage } from 'next';
 import { useSession } from 'next-auth/react';
-import Head from 'next/head';
 import Layout from '../../components/layout/layout';
 import LoadingButton from '@mui/lab/LoadingButton';
 import Modal from '../../components/common/modal';
 import TextField from '@mui/material/TextField';
-import Typography from '@mui/material/Typography';
 import { useEffect, useRef, useState } from 'react';
 import {
   dehydrate,
   QueryClient,
   useMutation,
-  useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
 import getProjects, { createProject } from '../../utils/fetcher/projects';
@@ -50,12 +47,6 @@ const Project: NextPage = () => {
       token: session,
     });
   };
-
-  useEffect(() => {
-    return () => {
-      setTitleErr('');
-    };
-  }, []);
 
   return (
     <>

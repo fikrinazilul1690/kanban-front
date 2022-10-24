@@ -123,12 +123,6 @@ const Signup: NextPage<Props> = ({}) => {
     );
   };
 
-  useEffect(() => {
-    dispatch({ type: 'RESET' });
-
-    return () => dispatch({ type: 'RESET' });
-  }, []);
-
   return (
     <BaseLayout>
       <Box component={'h2'}>Kanban</Box>

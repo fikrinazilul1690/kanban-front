@@ -21,9 +21,16 @@ import { useEffect, useRef, useState } from 'react';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Checkbox from '@mui/material/Checkbox';
 import { useSession } from 'next-auth/react';
-import getUserStories, {
+import ModeEditIcon from '@mui/icons-material/ModeEdit';
+import {
   createUserStory,
+  deleteUserStory,
+  updateUserStory,
 } from '../../utils/fetcher/user-story';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
 
 interface Props {
   projectId: number;
@@ -32,19 +39,29 @@ interface Props {
 const UsStatusBoard: NextPage<Props> = ({ projectId }) => {
   const nameRef = useRef<HTMLInputElement>();
   const subRef = useRef<HTMLInputElement>();
+  const subEditRef = useRef<HTMLInputElement>();
   const descRef = useRef<HTMLInputElement>();
+  const descEditRef = useRef<HTMLInputElement>();
   const { data: session } = useSession();
   const [colorHex, setColorHex] = useState('#A9AABC');
   const [colorErr, setColorErr] = useState('');
   const [nameErr, setNameErr] = useState('');
-  const [subErr, setSubErr] = useState('');
   const [descErr, setDescErr] = useState('');
+  const [descDefault, setDescDefault] = useState('');
+  const [descEditErr, setDescEditErr] = useState('');
+  const [subErr, setSubErr] = useState('');
+  const [subDefault, setSubDefault] = useState('');
+  const [subEditErr, setSubEditErr] = useState('');
   const [isClosed, setIsClosed] = useState(false);
   const [showCreateUsStatus, setShowCreateUsStatus] = useState(false);
   const [showCreateUs, setShowCreateUs] = useState(false);
+  const [showEditUs, setShowEditUs] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmDeleteTask, setConfirmDeleteTask] = useState(false);
   const [usStatusId, setUsStatusId] = useState<number>();
+  const [usId, setUsId] = useState<number>();
   const [statusSlug, setStatusSlug] = useState<string>('');
+  const [statusSlugEdit, setStatusSlugEdit] = useState<string>();
   const queryClient = useQueryClient();
   const { data: usStatus } = useQuery<UsStatus[]>(
     ['us-status', projectId],
@@ -66,9 +83,27 @@ const UsStatusBoard: NextPage<Props> = ({ projectId }) => {
       queryClient.invalidateQueries(['us-status']);
     },
   });
+  const updateUserStoryMutation = useMutation(updateUserStory, {
+    onSuccess: () => {
+      setShowEditUs(false);
+      queryClient.invalidateQueries(['us-status']);
+    },
+    onError: (err: any) => {
+      const { subject, description } = err.data.message;
+      !!subject && setSubEditErr(subject[0]);
+      !!description && setDescEditErr(description[0]);
+    },
+  });
   const deleteMutation = useMutation(deleteUsStatus, {
     onSuccess: () => {
       setConfirmDelete(false);
+      queryClient.invalidateQueries(['us-status']);
+    },
+  });
+
+  const deleteUserStoryMutation = useMutation(deleteUserStory, {
+    onSuccess: () => {
+      setConfirmDeleteTask(false);
       queryClient.invalidateQueries(['us-status']);
     },
   });
@@ -84,15 +119,6 @@ const UsStatusBoard: NextPage<Props> = ({ projectId }) => {
       !!description && setDescErr(description[0]);
     },
   });
-
-  useEffect(() => {
-    return () => {
-      setNameErr('');
-      setColorErr('');
-      setSubErr('');
-      setDescErr('');
-    };
-  }, []);
 
   return (
     <>
@@ -202,12 +228,63 @@ const UsStatusBoard: NextPage<Props> = ({ projectId }) => {
                     marginBottom: '10px',
                   }}
                   key={index}
-                  onClick={() => {}}
                 >
-                  <Typography>{task.subject}</Typography>
-                  <Typography variant='body2' color='text.secondary'>
-                    {task.description}
-                  </Typography>
+                  <Stack
+                    direction='row'
+                    justifyContent={'space-between'}
+                    alignItems={'center'}
+                  >
+                    <Box>
+                      <Typography
+                        sx={{
+                          textDecoration: status.isClosed
+                            ? 'line-through'
+                            : 'none',
+                        }}
+                      >
+                        {task.subject}
+                      </Typography>
+                      <Typography
+                        sx={{
+                          textDecoration: status.isClosed
+                            ? 'line-through'
+                            : 'none',
+                        }}
+                        variant='body2'
+                        color='text.secondary'
+                      >
+                        {task.description}
+                      </Typography>
+                    </Box>
+                    <Box>
+                      <IconButton
+                        sx={{
+                          color: 'gray',
+                          '&:hover': { color: 'orange' },
+                        }}
+                        onClick={() => {
+                          setShowEditUs(true);
+                          setSubDefault(task.subject);
+                          setDescDefault(task.description ?? 'No Description');
+                          setUsId(task.id);
+                        }}
+                      >
+                        <ModeEditIcon fontSize='small' />
+                      </IconButton>
+                      <IconButton
+                        sx={{
+                          color: 'gray',
+                          '&:hover': { color: 'red' },
+                        }}
+                        onClick={() => {
+                          setConfirmDeleteTask(true);
+                          setUsId(task.id);
+                        }}
+                      >
+                        <DeleteOutlined fontSize='small' />
+                      </IconButton>
+                    </Box>
+                  </Stack>
                 </Card>
               ))}
             </Box>
@@ -346,6 +423,99 @@ const UsStatusBoard: NextPage<Props> = ({ projectId }) => {
             setDescErr('');
           }}
         />
+      </Modal>
+      <Modal
+        show={confirmDeleteTask}
+        title='Delete Task'
+        action='Delete'
+        colorAction='error'
+        description='Task will be deleted'
+        onClick={() => {
+          deleteUserStoryMutation.mutate({
+            token: session!,
+            usId: usId!,
+          });
+        }}
+        onClose={() => setConfirmDeleteTask(false)}
+      >
+        <Typography>Are you sure want to delete this Task ?</Typography>
+      </Modal>
+      <Modal
+        show={showEditUs}
+        title='Edit Task'
+        action='Edit'
+        colorAction='success'
+        description=''
+        onClick={() => {
+          updateUserStoryMutation.mutate({
+            token: session!,
+            usId: usId!,
+            payload: {
+              statusSlug: !!statusSlugEdit ? statusSlugEdit : undefined,
+              description: !!descEditRef.current?.value
+                ? descEditRef.current?.value
+                : undefined,
+              subject: !!subEditRef.current?.value
+                ? subEditRef.current?.value
+                : undefined,
+            },
+          });
+        }}
+        onClose={() => {
+          setShowEditUs(false);
+          setSubEditErr('');
+          setDescEditErr('');
+          setStatusSlugEdit('');
+        }}
+      >
+        <TextField
+          margin='normal'
+          fullWidth
+          id='subject'
+          label='Subject'
+          placeholder={subDefault}
+          name='subject'
+          inputRef={subEditRef}
+          error={!!subEditErr}
+          helperText={subEditErr}
+          onFocus={() => {
+            setSubEditErr('');
+            setDescEditErr('');
+          }}
+        />
+        <TextField
+          margin='normal'
+          fullWidth
+          id='description'
+          placeholder={descDefault}
+          label='Description'
+          name='description'
+          inputRef={descEditRef}
+          error={!!descEditErr}
+          helperText={descEditErr}
+          onFocus={() => {
+            setSubEditErr('');
+            setDescEditErr('');
+          }}
+        />
+        <FormControl sx={{ minWidth: 120 }} size='small'>
+          <InputLabel id='select-status-label'>Status</InputLabel>
+          <Select
+            labelId='select-status-label'
+            id='select-status'
+            value={statusSlugEdit}
+            label='Status'
+            onChange={(e) => {
+              setStatusSlugEdit(e.target.value);
+            }}
+          >
+            {usStatus?.map((status) => (
+              <MenuItem key={status.id} value={status.slug}>
+                {status.name}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
       </Modal>
     </>
   );

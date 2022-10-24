@@ -1,7 +1,6 @@
 import { FC, ReactNode } from 'react';
 import Container from '@mui/material/Container';
 import Box from '@mui/material/Box';
-import Image from 'next/image';
 
 interface Props {
   children: ReactNode;

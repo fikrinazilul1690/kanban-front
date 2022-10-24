@@ -64,12 +64,6 @@ const Sidebar: FC<Props> = ({}) => {
     async () => await getProjects(user?.id)
   );
 
-  useEffect(() => {
-    return () => {
-      setTitleErr('');
-    };
-  }, []);
-
   return (
     <>
       <Drawer

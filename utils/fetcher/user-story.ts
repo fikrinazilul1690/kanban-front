@@ -19,6 +19,12 @@ interface ICreateUserStory {
   token: JWT | Session;
 }
 
+interface IUpdateUserStory {
+  payload: Partial<Omit<CreateUserStoryDto, 'projectId'>>;
+  usId: number;
+  token: JWT | Session;
+}
+
 export default async function getUserStories(query: FilterDto) {
   const { projectId, statusSlug } = query;
   const userStories = await axiosClient.get(
@@ -38,4 +44,31 @@ export async function createUserStory(props: ICreateUserStory) {
       },
     }
   );
+
+  return userStory;
+}
+
+export async function updateUserStory(props: IUpdateUserStory) {
+  const { payload, usId, token } = props;
+  const userStory = await axiosClient.patch<UserStory>(
+    `/userstories/${usId}`,
+    JSON.stringify({ ...payload }),
+    {
+      headers: {
+        Authorization: `Bearer ${token.accessToken}`,
+      },
+    }
+  );
+  return userStory;
+}
+
+export async function deleteUserStory(
+  props: Omit<IUpdateUserStory, 'payload'>
+) {
+  const { token, usId } = props;
+  return await axiosClient.delete(`/userstories/${usId}`, {
+    headers: {
+      Authorization: `Bearer ${token.accessToken}`,
+    },
+  });
 }
